@@ -1,0 +1,576 @@
+openapi: 3.0.4
+info:
+  title: A Note-Taking RESTful API Specification
+  description: A note-taking RESTful API specification. Inspired by Google Keep.
+  version: 1.0.0
+  contact:
+    name: Syahda Romansyah
+    email: codewithsyahda@gmail.com
+  license:
+    name: MIT
+    url: https://opensource.org/license/mit
+servers:
+  - url: http://localhost:{port}/api/v1
+    description: The development server.
+    variables:
+      port:
+        default: '5000'
+paths:
+  /notes:
+    get:
+      summary: Gets all user notes.
+      description: Gets all active and archived user notes, including those in the trash that are not older than 7 days.
+      tags:
+        - Notes
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: query
+          name: search
+          schema:
+            type: string
+          description: Filters all user notes based on the note title and/or note body content.
+        - in: query
+          name: is_active
+          schema:
+            type: string
+            enum:
+              - 'true'
+              - 'false'
+          description: Filters all user notes by active status.
+        - in: query
+          name: is_archived
+          schema:
+            type: string
+            enum:
+              - 'true'
+              - 'false'
+          description: Filters all user notes by archived status.
+        - in: query
+          name: is_trashed
+          schema:
+            type: string
+            enum:
+              - 'true'
+              - 'false'
+          description: Filters all user notes in the trash and not older than 7 days.
+      responses:
+        '200':
+          description: A successful response with all user notes.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      notes:
+                        type: object
+                        properties:
+                          active:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/NoteSimple'
+                          archived:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/NoteSimple'
+                          trash:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/NoteSimple'
+              example:
+                data:
+                  notes:
+                    active:
+                      - id: 10000000-0000-0000-0000-000000000001
+                        title: Note Title 1
+                        jsonContent: '{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"Content note 1"}]}]}'
+                        createdAt: 2026-01-31T17:00:00.000Z
+                        updatedAt: 2026-01-31T17:00:00.000Z
+                        authorId: id-user-1
+                      - id: 10000000-0000-0000-0000-000000000002
+                        title: Note Title 2
+                        jsonContent: '{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"Content note 2"}]}]}'
+                        createdAt: 2026-01-31T17:00:00.000Z
+                        updatedAt: 2026-01-31T17:00:00.000Z
+                        authorId: id-user-1
+                    archived:
+                      - id: 10000000-0000-0000-0000-000000000003
+                        title: Note Title 3
+                        jsonContent: '{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"Content note 3"}]}]}'
+                        createdAt: 2026-01-31T17:00:00.000Z
+                        updatedAt: 2026-01-31T17:00:00.000Z
+                        authorId: id-user-1
+                      - id: 10000000-0000-0000-0000-000000000004
+                        title: Note Title 4
+                        jsonContent: '{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"Content note 4"}]}]}'
+                        createdAt: 2026-01-31T17:00:00.000Z
+                        updatedAt: 2026-01-31T17:00:00.000Z
+                        authorId: id-user-1
+                    trash:
+                      - id: 10000000-0000-0000-0000-000000000005
+                        title: Note Title 5
+                        jsonContent: '{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"Content note 5"}]}]}'
+                        createdAt: 2026-01-31T17:00:00.000Z
+                        updatedAt: 2026-01-31T17:00:00.000Z
+                        authorId: id-user-1
+                      - id: 10000000-0000-0000-0000-000000000006
+                        title: Note Title 6
+                        jsonContent: '{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"Content note 6"}]}]}'
+                        createdAt: 2026-01-31T17:00:00.000Z
+                        updatedAt: 2026-01-31T17:00:00.000Z
+                        authorId: id-user-1
+        '400':
+          description: A bad request response when requesting the user notes.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebResponseError'
+              example:
+                title: Invalid Query Parameters
+                status: 400
+                detail: One or more query parameters are invalid.
+                errors:
+                  validation:
+                    - query: is_active
+                      message: Must be a "true" or "false" string value if set.
+                    - query: is_archived
+                      message: Must be a "true" or "false" string value if set.
+                    - query: is_trashed
+                      message: Must be a "true" or "false" string value if set.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      summary: Creates a new user note.
+      tags:
+        - Notes
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                jsonContent:
+                  type: string
+              required:
+                - title
+                - jsonContent
+              additionalProperties: false
+            example:
+              title: Note Title 10
+              jsonContent: '{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"Content note 10"}]}]}'
+      responses:
+        '201':
+          description: A successful response with the new created user note.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      note:
+                        $ref: '#/components/schemas/NoteSimple'
+              example:
+                data:
+                  note:
+                    id: 10000000-0000-0000-0000-000000000010
+                    title: Note Title 10
+                    jsonContent: '{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"Content note 10"}]}]}'
+                    createdAt: 2026-01-31T17:00:00.000Z
+                    updatedAt: 2026-01-31T17:00:00.000Z
+                    authorId: id-user-1
+        '400':
+          description: A bad request response when creating a new user note.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebResponseError'
+              example:
+                title: Body Request Validation Error
+                status: 400
+                detail: One or more body request fields are invalid.
+                errors:
+                  validation:
+                    - field: title
+                      message: Must not more than 128 characters.
+                    - field: jsonContent
+                      message: Must be a valid JSON document schema.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      summary: Deletes all user notes in the trash.
+      tags:
+        - Notes
+      security:
+        - cookieAuth: []
+      responses:
+        '204':
+          description: A successful response after deleting all user notes in the trash.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /notes/{noteId}:
+    get:
+      summary: Gets a user note by the note ID.
+      tags:
+        - Notes
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/noteIdPathParam'
+      responses:
+        '200':
+          description: A successful response with a detailed user note.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      note:
+                        $ref: '#/components/schemas/NoteDetail'
+              example:
+                data:
+                  note:
+                    id: 10000000-0000-0000-0000-000000000005
+                    title: Note Title 5
+                    jsonContent: '{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"Content note 5"}]}]}'
+                    createdAt: 2026-01-31T17:00:00.000Z
+                    updatedAt: 2026-01-31T17:00:00.000Z
+                    archivedAt: 2026-01-31T17:00:00.000Z
+                    trashedAt: null
+                    authorId: id-user-1
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    put:
+      summary: Updates a user note by the note ID.
+      tags:
+        - Notes
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/noteIdPathParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                jsonContent:
+                  type: string
+                status:
+                  type: string
+                  enum:
+                    - active
+                    - archived
+                isTrashed:
+                  type: boolean
+              required:
+                - title
+                - jsonContent
+                - status
+                - isTrashed
+              additionalProperties: false
+            example:
+              title: Updated Title Note 1
+              jsonContent: '{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"Updated content note 1"}]}]}'
+              status: archived
+              isTrashed: true
+      responses:
+        '200':
+          description: A successful response after updating a user note by the note ID.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      note:
+                        $ref: '#/components/schemas/NoteSimple'
+              example:
+                data:
+                  note:
+                    id: 10000000-0000-0000-0000-000000000008
+                    title: Updated Note Title 8
+                    jsonContent: '{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"Updated content note 8"}]}]}'
+                    createdAt: 2026-01-31T17:00:00.000Z
+                    updatedAt: 2026-01-31T17:00:00.000Z
+                    authorId: id-user-1
+        '400':
+          description: A bad request response after updating a user note by the note ID.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebResponseError'
+              example:
+                title: Body Request Validation Error
+                status: 400
+                detail: One or more body request fields are invalid.
+                errors:
+                  validation:
+                    - field: title
+                      message: Must not more than 128 characters.
+                    - field: jsonContent
+                      message: Must be a valid JSON document schema.
+                    - field: status
+                      message: Must be either a "success" or "archived" string value.
+                    - field: isTrashed
+                      message: Must be a boolean value type.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    patch:
+      summary: Patches a user note by the note ID.
+      tags:
+        - Notes
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/noteIdPathParam'
+      requestBody:
+        required: true
+        description: A request body for patching a note by the note ID. **The request body must have at least one field**.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                jsonContent:
+                  type: string
+                status:
+                  type: string
+                  enum:
+                    - active
+                    - archived
+                isTrashed:
+                  type: boolean
+              additionalProperties: false
+              anyOf:
+                - required: [title]
+                  properties:
+                    title:
+                      type: string
+                - required: [jsonContent]
+                  properties:
+                    jsonContent:
+                      type: string
+                - required: [status]
+                  properties:
+                    status:
+                      type: string
+                      enum:
+                        - active
+                        - archived
+                - required: [isTrashed]
+                  properties:
+                    isTrashed:
+                      type: boolean
+            example:
+              status: active
+              isTrashed: true
+      responses:
+        '200':
+          description: A successful response after patching a user note by the note ID.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      note:
+                        $ref: '#/components/schemas/NoteSimple'
+              example:
+                data:
+                  note:
+                    id: 10000000-0000-0000-0000-000000000008
+                    title: Updated Note Title 8
+                    jsonContent: '{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"Updated content note 8"}]}]}'
+                    createdAt: 2026-01-31T17:00:00.000Z
+                    updatedAt: 2026-01-31T17:00:00.000Z
+                    authorId: id-user-1
+        '400':
+          description: A bad request response when patching a user note by the note ID.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebResponseError'
+              examples:
+                InvalidBodyRequest:
+                  value:
+                    title: Body Request Validation Error
+                    status: 400
+                    detail: One or more body request fields are invalid.
+                    errors:
+                      validation:
+                        - field: title
+                          message: Must not more than 128 characters.
+                        - field: jsonContent
+                          message: Must be a valid JSON document schema.
+                        - field: status
+                          message: Must be either a "success" or "archived" string value.
+                        - field: isTrashed
+                          message: Must be a boolean value type.
+                EmptyBodyRequest:
+                  value:
+                    title: Body Request Validation Error
+                    status: 400
+                    detail: Body request must have at least one field.
+                    errors: {}
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      summary: Deletes a user note by the note ID in the trash.
+      tags:
+        - Notes
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/noteIdPathParam'
+      responses:
+        '204':
+          description: A successful response after deleting a user note by the note ID in the trash.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      name: auth.session_token
+      in: cookie
+  parameters:
+    noteIdPathParam:
+      in: path
+      name: noteId
+      required: true
+      schema:
+        type: string
+        format: uuid
+  schemas:
+    NoteSimple:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        jsonContent:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        authorId:
+          type: string
+    NoteDetail:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        jsonContent:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        archivedAt:
+          type: string
+          format: date-time
+          nullable: true
+        trashedAt:
+          type: string
+          format: date-time
+          nullable: true
+        authorId:
+          type: string
+    WebResponseError:
+      type: object
+      properties:
+        title:
+          type: string
+        status:
+          type: number
+        detail:
+          type: string
+        errors:
+          type: object
+          additionalProperties: true
+  responses:
+    Unauthorized:
+      description: An unauthorized error response.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/WebResponseError'
+          example:
+            title: Unauthorized
+            status: 401
+            detail: Authentication is required.
+            errors: {}
+    NotFound:
+      description: A not found error response.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/WebResponseError'
+          example:
+            title: Resource Not Found
+            status: 404
+            detail: The resource is not found.
+            errors: {}
+    InternalServerError:
+      description: An internal server error response.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/WebResponseError'
+          example:
+            title: Internal Server Error
+            status: 500
+            detail: Cannot process the client request.
+            errors: {}
